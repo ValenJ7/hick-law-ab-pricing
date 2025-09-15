@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elegí tu plan — Ley de Hick (A vs B)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --elev:#0f1730; --card:#0d1428; --text:#e8edf7; --muted:#a5b0c6; --brand:#7aa2ff; --brand-2:#9dd6ff; --ok:#22c55e; --danger:#ef4444; --border:#1d2640; --ring:#7aa2ff80;
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html:focus-within{scroll-behavior:smooth}
+    @media(prefers-reduced-motion:reduce){ html:focus-within{scroll-behavior:auto} *{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}
+    body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; background:radial-gradient(1200px 500px at 20% -10%, #142049 0%, transparent 50%), linear-gradient(180deg,#0b1020 0%, #060912 100%); color:var(--text)}
+    .wrap{max-width:1180px; margin:40px auto; padding:0 16px}
+    .topbar{display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:18px}
+    .skip{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden}
+    .skip:focus{left:16px; top:16px; width:auto; height:auto; padding:8px 12px; background:#fff; color:#111; border-radius:10px}
+    h1{font-size:clamp(22px,3.4vw,38px); margin:0}
+    p.lead{color:var(--muted); margin:6px 0 20px}
+    .tabs{display:flex; gap:10px; margin:10px 0 24px}
+    .tabs button{appearance:none; border:1px solid var(--border); background:linear-gradient(180deg,#0f1730,#0b1226); color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer}
+    .tabs button[aria-pressed="true"]{background:linear-gradient(180deg,var(--brand),var(--brand-2)); color:#0b1220; border-color:transparent; box-shadow:0 0 0 4px var(--ring)}
+    section{display:none}
+    section.active{display:block}
+
+    /* ====== Shared components ====== */
+    .panel{border:1px solid var(--border); background:linear-gradient(180deg,var(--elev),#0a1226); border-radius:var(--radius); padding:20px; box-shadow:0 8px 30px rgba(0,0,0,.35)}
+    .grid{display:grid; gap:18px}
+    .grid.cols-3{grid-template-columns:repeat(3, minmax(0,1fr))}
+    @media (max-width:920px){ .grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr))} }
+    @media (max-width:620px){ .grid.cols-3{grid-template-columns:1fr} }
+
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+    /* ====== Version A ====== */
+    .segmented{display:inline-flex; border:1px solid var(--border); border-radius:999px; overflow:hidden}
+    .segmented input{position:absolute; opacity:0; pointer-events:none}
+    .segmented label{padding:8px 14px; cursor:pointer; user-select:none;}
+    .segmented input:checked + label{background:linear-gradient(180deg,var(--brand),var(--brand-2)); color:#071021}
+
+    .plan{position:relative; border:1px solid var(--border); border-radius:var(--radius); padding:20px; background:linear-gradient(180deg,#0b1226 0%, #0a1020 100%); transition:transform .2s ease, box-shadow .2s ease}
+    .plan:hover{transform:translateY(-3px); box-shadow:0 10px 30px rgba(0,0,0,.45)}
+    .plan.reco{outline:2px solid var(--brand); outline-offset:2px}
+    .badge{position:absolute; top:12px; right:12px; background:linear-gradient(180deg,var(--brand),var(--brand-2)); color:#001226; font-weight:800; font-size:12px; padding:4px 10px; border-radius:999px}
+    .plan h3{margin:2px 0 6px}
+    .desc{color:var(--muted); font-size:14px; margin:0 0 8px}
+    .price{display:flex; align-items:baseline; gap:8px; margin:10px 0}
+    .price .num{font-size:34px; font-weight:900}
+    .price .per{font-size:12px; color:var(--muted)}
+    .save{font-size:12px; color:#a8ffcf}
+    .features{margin:12px 0 0; padding:0; list-style:none}
+    .features li{display:flex; gap:10px; align-items:flex-start; margin:8px 0; color:#cbd5e1}
+    .features li::before{content:"✓"; color:var(--ok); margin-top:2px}
+    .cta-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; cursor:pointer; text-decoration:none; font-weight:700}
+    .btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand-2)); color:#061023; border:none}
+    .btn.secondary{border:1px solid var(--border); color:var(--text); background:#0b1326}
+
+    dialog.compare{border:none; border-radius:16px; padding:0; max-width:860px; width:96vw; color:#0e1320}
+    dialog::backdrop{background:rgba(0,0,0,.65)}
+    .cmp-wrap{background:#fff; border-radius:16px; overflow:auto}
+    .cmp-head{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #e5e7eb}
+    .cmp-body{padding:16px}
+    .cmp-table{width:100%; border-collapse:collapse; font-size:14px}
+    .cmp-table th,.cmp-table td{border:1px solid #e5e7eb; padding:8px 10px; text-align:left}
+
+    /* ====== Version B (intencionalmente mala) ====== */
+    .b-toolbar{display:flex; flex-wrap:wrap; gap:10px; margin:12px 0}
+    .chip{border:1px dashed var(--border); background:#0a0f1a; padding:10px; border-radius:12px}
+    .b-grid{display:grid; gap:12px; grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:1200px){ .b-grid{grid-template-columns:repeat(3,1fr)} }
+    @media (max-width:900px){ .b-grid{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:620px){ .b-grid{grid-template-columns:1fr} }
+    .b-card{border:1px dashed var(--border); background:#0a0f1a; border-radius:12px; padding:14px; position:relative}
+    .b-card h3{margin:0 0 6px}
+    .b-weak{color:#a1a1aa}
+    .weak-cta{display:inline-flex; border:1px solid var(--border); padding:6px 10px; border-radius:10px; color:var(--muted); background:#0b1324; margin-top:8px}
+    .blink{animation:blink 1.1s infinite}
+    @keyframes blink{50%{opacity:.35}}
+    .noise{position:sticky; top:0; z-index:2; background:linear-gradient(90deg,#1b284f, #11204a 55%, #1b284f); padding:10px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.45)}
+    .noise p{margin:0; font-size:14px}
+    .dense-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:10px}
+    .dense-table th,.dense-table td{border:1px solid #223; padding:6px 8px}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <div class="wrap" id="main">
+    <div class="topbar">
+      <div>
+        <h1>Elegí tu plan — A/B (Ley de Hick)</h1>
+        <p class="lead">A = profesional, claro y accesible. B = también “pro” visualmente, pero deliberadamente abrumadora (rompe Hick).</p>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Cambiar versión">
+      <button id="tabA" role="tab" aria-controls="vA" aria-pressed="true">Ver Versión A (cumple)</button>
+      <button id="tabB" role="tab" aria-controls="vB" aria-pressed="false">Ver Versión B (rompe)</button>
+    </div>
+
+    <!-- ==================== VERSION A ==================== -->
+    <section id="vA" class="active" aria-labelledby="tabA" role="tabpanel">
+      <div class="panel" aria-label="Selector de facturación">
+        <form id="billingForm" aria-describedby="billNote">
+          <div class="segmented" role="radiogroup" aria-label="Modo de facturación">
+            <input type="radio" id="bill-month" name="billing" value="month" checked><label for="bill-month">Mensual</label>
+            <input type="radio" id="bill-year" name="billing" value="year"><label for="bill-year">Anual</label>
+          </div>
+          <p id="billNote" class="sr-only" aria-live="polite">Modo de facturación: mensual</p>
+        </form>
+      </div>
+
+      <div class="grid cols-3" style="margin-top:18px">
+        <!-- Básico -->
+        <article class="plan" aria-labelledby="basic-title">
+          <h3 id="basic-title">Básico</h3>
+          <p class="desc">Para empezar sin costo.</p>
+          <div class="price"><span class="num" data-price data-monthly="0" data-annual="0">$0</span><span class="per">/ mes</span></div>
+          <ul class="features">
+            <li>Hasta 3 proyectos</li>
+            <li>Soporte por email</li>
+            <li>Comunidad abierta</li>
+          </ul>
+          <div class="cta-row">
+            <a class="btn primary" href="#">Elegir plan</a>
+            <button class="btn secondary" data-compare="basic" type="button">Comparar</button>
+          </div>
+        </article>
+
+        <!-- Pro (Recomendado) -->
+        <article class="plan reco" aria-labelledby="pro-title">
+          <div class="badge" aria-hidden="true">Recomendado</div>
+          <h3 id="pro-title">Pro</h3>
+          <p class="desc">Para equipos y proyectos serios.</p>
+          <div class="price">
+            <span class="num" data-price data-monthly="12" data-annual="120">$12</span>
+            <span class="per">/ mes</span>
+            <span class="save" data-save>(ahorrás 15% anual)</span>
+          </div>
+          <ul class="features">
+            <li>Proyectos ilimitados</li>
+            <li>Colaboración en equipo</li>
+            <li>Integraciones populares</li>
+          </ul>
+          <div class="cta-row">
+            <a class="btn primary" href="#">Elegir Pro</a>
+            <button class="btn secondary" data-compare="pro" type="button">Comparar</button>
+          </div>
+        </article>
+
+        <!-- Empresa -->
+        <article class="plan" aria-labelledby="biz-title">
+          <h3 id="biz-title">Empresa</h3>
+          <p class="desc">Seguridad y soporte a escala.</p>
+          <div class="price"><span class="num" data-price data-monthly="45" data-annual="450">$45</span><span class="per">/ mes</span></div>
+          <ul class="features">
+            <li>SSO y SAML</li>
+            <li>Soporte 24/7</li>
+            <li>Security reviews</li>
+          </ul>
+          <div class="cta-row">
+            <a class="btn primary" href="#">Contactar ventas</a>
+            <button class="btn secondary" data-compare="biz" type="button">Comparar</button>
+          </div>
+        </article>
+      </div>
+
+      <!-- Compare dialog (accesible) -->
+      <dialog class="compare" id="cmp">
+        <div class="cmp-wrap">
+          <div class="cmp-head">
+            <strong>Comparación rápida</strong>
+            <button id="closeCmp" class="btn secondary" style="margin:0">Cerrar</button>
+          </div>
+          <div class="cmp-body">
+            <table class="cmp-table" aria-label="Tabla comparativa">
+              <thead>
+                <tr><th>Plan</th><th>Proyectos</th><th>Soporte</th><th>Integraciones</th><th>Equipo</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Básico</td><td>3</td><td>Email</td><td>Básicas</td><td>—</td></tr>
+                <tr><td>Pro</td><td>Ilimitados</td><td>Email + chat</td><td>Populares</td><td>✓</td></tr>
+                <tr><td>Empresa</td><td>Ilimitados</td><td>24/7</td><td>Avanzadas</td><td>✓</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </dialog>
+    </section>
+
+    <!-- ==================== VERSION B ==================== -->
+    <section id="vB" aria-labelledby="tabB" role="tabpanel">
+      <div class="noise"><p><strong>¡NUEVO!</strong> Descuentos por 1/3/6/9/12 meses + moneda USD/ARS/EUR/GBP/JPY y <span class="blink">¡15 add‑ons simultáneos!</span> (algunas condiciones aplican siempre).</p></div>
+      <div class="panel">
+        <div class="b-toolbar">
+          <div class="chip">
+            <div><strong>Duración</strong></div>
+            <label><input type="radio" name="dur" checked> 1 mes</label>
+            <label><input type="radio" name="dur"> 3 meses</label>
+            <label><input type="radio" name="dur"> 6 meses</label>
+            <label><input type="radio" name="dur"> 9 meses</label>
+            <label><input type="radio" name="dur"> 12 meses</label>
+          </div>
+          <div class="chip">
+            <div><strong>Moneda (múltiples a la vez)</strong></div>
+            <label><input type="checkbox" checked> USD</label>
+            <label><input type="checkbox" checked> ARS</label>
+            <label><input type="checkbox"> EUR</label>
+            <label><input type="checkbox"> GBP</label>
+            <label><input type="checkbox"> JPY</label>
+          </div>
+          <div class="chip">
+            <div><strong>Add‑ons (todos visibles)</strong></div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px">
+              <label><input type="checkbox" checked> AI suite</label>
+              <label><input type="checkbox" checked> Anti‑AI suite</label>
+              <label><input type="checkbox"> Extra seats</label>
+              <label><input type="checkbox"> Seats plus</label>
+              <label><input type="checkbox"> Backup</label>
+              <label><input type="checkbox"> Backup+</label>
+              <label><input type="checkbox"> Export XL</label>
+              <label><input type="checkbox"> Export XXL</label>
+              <label><input type="checkbox"> Themes</label>
+              <label><input type="checkbox"> Skins</label>
+              <label><input type="checkbox"> Packs</label>
+              <label><input type="checkbox"> Packs+</label>
+              <label><input type="checkbox"> Analytics</label>
+              <label><input type="checkbox"> Anti‑Analytics</label>
+              <label><input type="checkbox"> Beta‑Labs</label>
+            </div>
+          </div>
+          <div class="chip">
+            <div><strong>Comparar (12 columnas)</strong></div>
+            <label><input type="checkbox" checked> TODO</label>
+            <label><input type="checkbox"> Descuentos*</label>
+            <label><input type="checkbox"> Ocultar precios</label>
+          </div>
+        </div>
+
+        <div class="b-grid" aria-label="Doce planes parecidos (sin jerarquía)">
+          <article class="b-card"><h3>Starter‑Mini</h3><div class="b-weak">$4.99 | $4,90 | 4€</div><p class="sm">2 proyectos; 3 seats? quizá</p><a class="weak-cta" href="#">Elegir / Comprar</a></article>
+          <article class="b-card"><h3>Starter</h3><div class="b-weak">$5.00 ($4.75 anual?)</div><p class="sm">2–4 proyectos, soporte?</p><a class="weak-cta" href="#">Comprar</a></article>
+          <article class="b-card"><h3>Starter‑Plus</h3><div class="b-weak">$5.49</div><p class="sm">2 proyectos + add‑ons</p><a class="weak-cta" href="#">Agregar</a></article>
+          <article class="b-card"><h3>Pro‑Lite</h3><div class="b-weak">$9.99 | $10.1</div><p class="sm">3 seats; Export XL* *</p><a class="weak-cta" href="#">Elegir</a></article>
+          <article class="b-card"><h3>Pro</h3><div class="b-weak">$12.00</div><p class="sm">¿Ilimitado? depende</p><a class="weak-cta" href="#">Elegir / Comprar</a></article>
+          <article class="b-card"><h3>Pro‑Max</h3><div class="b-weak">$12.49</div><p class="sm">Pro pero maxeado (?)</p><a class="weak-cta" href="#">Seleccionar</a></article>
+          <article class="b-card"><h3>Business‑Start</h3><div class="b-weak">$40*</div><p class="sm">SSO quizá; SLA*</p><a class="weak-cta" href="#">Start now</a></article>
+          <article class="b-card"><h3>Business</h3><div class="b-weak">$45 (consultá)</div><p class="sm">Todo tal vez</p><a class="weak-cta" href="#">Contactar/Comprar</a></article>
+          <article class="b-card"><h3>Business‑Ultra</h3><div class="b-weak">$49–$59</div><p class="sm">Business + Ultra</p><a class="weak-cta" href="#">Más info</a></article>
+          <article class="b-card"><h3>Enterprise‑Mini</h3><div class="b-weak">$60?</div><p class="sm">¿SSO? ¿SAML?</p><a class="weak-cta" href="#">Comprar</a></article>
+          <article class="b-card"><h3>Enterprise</h3><div class="b-weak">$65</div><p class="sm">Todo + dudas</p><a class="weak-cta" href="#">Comprar</a></article>
+          <article class="b-card"><h3>Enterprise‑Ultra‑X</h3><div class="b-weak">$75–$95</div><p class="sm">Mismo + Ultra X</p><a class="weak-cta" href="#">Más info</a></article>
+        </div>
+
+        <table class="dense-table" aria-label="Comparativa densa sin prioridades">
+          <thead>
+            <tr>
+              <th>Plan</th>
+              <th>Proyectos</th>
+              <th>Seats</th>
+              <th>Soporte</th>
+              <th>Integraciones</th>
+              <th>Export</th>
+              <th>Backup</th>
+              <th>Add‑ons</th>
+              <th>SSO</th>
+              <th>SLA</th>
+              <th>Precio USD</th>
+              <th>Precio ARS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Starter‑Mini</td><td>2</td><td>3?</td><td>?</td><td>Básicas</td><td>—</td><td>Opcional</td><td>Algunos</td><td>—</td><td>—</td><td>$4.99</td><td>$—</td></tr>
+            <tr><td>Pro</td><td>¿Ilimitado?</td><td>5</td><td>Email</td><td>Populares</td><td>XL*</td><td>+</td><td>Muchos</td><td>Parcial</td><td>?</td><td>$12</td><td>$—</td></tr>
+            <tr><td>Business</td><td>∞</td><td>10</td><td>24/7*</td><td>Avanzadas</td><td>XXL</td><td>Incl.</td><td>Todos</td><td>✓</td><td>✓</td><td>$45</td><td>$—</td></tr>
+          </tbody>
+        </table>
+        <p class="b-weak" style="margin-top:8px">*Descuentos no acumulables salvo cuando sí. **Precios indicativos según moneda y viento.</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const tabA = document.getElementById('tabA');
+    const tabB = document.getElementById('tabB');
+    const vA = document.getElementById('vA');
+    const vB = document.getElementById('vB');
+
+    function show(section){
+      const isA = section === 'A';
+      vA.classList.toggle('active', isA);
+      vB.classList.toggle('active', !isA);
+      tabA.setAttribute('aria-pressed', String(isA));
+      tabB.setAttribute('aria-pressed', String(!isA));
+    }
+    tabA.addEventListener('click', ()=>show('A'));
+    tabB.addEventListener('click', ()=>show('B'));
+
+    // ===== Version A pricing toggle =====
+    const billingForm = document.getElementById('billingForm');
+    const billNote = document.getElementById('billNote');
+    function updatePrices(){
+      const mode = new FormData(billingForm).get('billing') || 'month';
+      billNote.textContent = `Modo de facturación: ${mode === 'year' ? 'anual' : 'mensual'}`;
+      document.querySelectorAll('[data-price]').forEach(el=>{
+        const m = Number(el.getAttribute('data-monthly'));
+        const y = Number(el.getAttribute('data-annual'));
+        const isYear = mode === 'year';
+        const val = isYear ? y : m;
+        el.textContent = `$${val}`;
+        const per = el.parentElement.querySelector('.per');
+        if(per) per.textContent = isYear ? '/ año' : '/ mes';
+      });
+      const save = document.querySelector('[data-save]');
+      if(save) save.style.visibility = (new FormData(billingForm).get('billing')==='year') ? 'visible' : 'hidden';
+    }
+    billingForm.addEventListener('change', updatePrices);
+    updatePrices();
+
+    // Accessible compare dialog
+    const cmp = document.getElementById('cmp');
+    const closeCmp = document.getElementById('closeCmp');
+    document.querySelectorAll('[data-compare]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ cmp.showModal(); });
+    });
+    closeCmp.addEventListener('click', ()=>cmp.close());
+
+    // ===== Version B distraction: random "promos" =====
+    setInterval(()=>{
+      document.querySelectorAll('.b-card').forEach((c,i)=>{
+        c.classList.toggle('blink', Math.random()>0.7);
+      });
+    }, 1200);
+  </script>
+</body>
+</html>
